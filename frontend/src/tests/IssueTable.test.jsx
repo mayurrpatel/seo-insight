@@ -60,15 +60,14 @@ describe('IssueTable component', () => {
     expect(screen.queryByText('Missing H1 Heading')).toBeNull();
   });
 
-  it('filters issues by severity select', () => {
+  it('filters issues by clicking severity pill tab', () => {
     render(<IssueTable issues={mockIssues} onSelectIssue={() => {}} />);
 
-    const selects = screen.getAllByRole('combobox');
-    const severitySelect = selects[0];
-
-    fireEvent.change(severitySelect, { target: { value: 'CRITICAL' } });
+    const critPill = screen.getByRole('button', { name: /Critical/i });
+    fireEvent.click(critPill);
 
     expect(screen.getByText('Missing Title Tag')).toBeDefined();
     expect(screen.queryByText('Missing H1 Heading')).toBeNull();
+    expect(screen.queryByText('Missing Alt Tag')).toBeNull();
   });
 });

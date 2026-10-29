@@ -1,11 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ExternalLink, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 export default function IssueTable({ issues = [], onSelectIssue }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('PRIORITY_DESC');
+
+  // Count by severity for the quick filter pills
+  const counts = useMemo(() => {
+    const c = { ALL: issues.length, CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    issues.forEach((i) => {
+      const s = i.severity?.toUpperCase();
+      if (c[s] !== undefined) c[s]++;
+    });
+    return c;
+  }, [issues]);
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -57,6 +67,50 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
 
   return (
     <div className="card table-card">
+      {/* Interactive Severity Filter Pills */}
+      <div className="severity-tabs-container">
+        <button
+          type="button"
+          className={`tab-pill ${severityFilter === 'ALL' ? 'tab-pill-active' : ''}`}
+          onClick={() => setSeverityFilter('ALL')}
+        >
+          All Findings <span className="tab-pill-count">{counts.ALL}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`tab-pill tab-pill-critical ${severityFilter === 'CRITICAL' ? 'tab-pill-active' : ''}`}
+          onClick={() => setSeverityFilter('CRITICAL')}
+        >
+          Critical <span className="tab-pill-count">{counts.CRITICAL}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`tab-pill tab-pill-high ${severityFilter === 'HIGH' ? 'tab-pill-active' : ''}`}
+          onClick={() => setSeverityFilter('HIGH')}
+        >
+          High Priority <span className="tab-pill-count">{counts.HIGH}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`tab-pill tab-pill-medium ${severityFilter === 'MEDIUM' ? 'tab-pill-active' : ''}`}
+          onClick={() => setSeverityFilter('MEDIUM')}
+        >
+          Medium <span className="tab-pill-count">{counts.MEDIUM}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`tab-pill tab-pill-low ${severityFilter === 'LOW' ? 'tab-pill-active' : ''}`}
+          onClick={() => setSeverityFilter('LOW')}
+        >
+          Low <span className="tab-pill-count">{counts.LOW}</span>
+        </button>
+      </div>
+
+      {/* Search & Select Controls */}
       <div className="table-controls">
         <div className="search-box">
           <Search size={16} className="search-icon" />
@@ -72,22 +126,10 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
         <div className="filters-group">
           <select
             className="filter-select"
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-          >
-            <option value="ALL">All Severities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High Priority</option>
-            <option value="MEDIUM">Medium Priority</option>
-            <option value="LOW">Low Priority</option>
-          </select>
-
-          <select
-            className="filter-select"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
-            <option value="ALL">All Categories</option>
+            <option value="ALL">All Categories ({categories.length})</option>
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -100,22 +142,22 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="PRIORITY_DESC">Sort: Priority Score (High → Low)</option>
-            <option value="PRIORITY_ASC">Sort: Priority Score (Low → High)</option>
-            <option value="SEVERITY">Sort: Severity</option>
-            <option value="TITLE">Sort: Issue Title</option>
+            <option value="PRIORITY_DESC">Sort: Priority (High → Low)</option>
+            <option value="PRIORITY_ASC">Sort: Priority (Low → High)</option>
+            <option value="SEVERITY">Sort: Severity Order</option>
+            <option value="TITLE">Sort: Alphabetical Title</option>
           </select>
         </div>
       </div>
 
-      <div style={{ padding: '0.75rem 1.5rem', background: '#f8fafc', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ padding: '0.65rem 1.5rem', background: '#f8fafc', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
         <span>Showing <strong>{filteredIssues.length}</strong> of <strong>{issues.length}</strong> prioritized findings</span>
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
-            style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.8rem' }}
+            style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
           >
-            Clear Search
+            Reset Search
           </button>
         )}
       </div>
@@ -128,13 +170,13 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
               <th style={{ width: '110px' }}>Severity</th>
               <th>Issue Title &amp; Category</th>
               <th>Affected Target URL</th>
-              <th style={{ textAlign: 'right', width: '120px' }}>Fix Guidance</th>
+              <th style={{ textAlign: 'right', width: '120px' }}>Remediation</th>
             </tr>
           </thead>
           <tbody>
             {filteredIssues.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748b' }}>
                   No SEO findings matched your filter or search criteria.
                 </td>
               </tr>
@@ -142,7 +184,7 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
               filteredIssues.map((item) => {
                 const sevClass = (item.severity || 'low').toLowerCase();
                 return (
-                  <tr key={item.id} onClick={() => onSelectIssue(item)} style={{ cursor: 'pointer' }}>
+                  <tr key={item.id} onClick={() => onSelectIssue(item)} className="table-issue-row">
                     <td>
                       <span className="priority-score-pill">
                         {item.priority_score}
@@ -170,7 +212,7 @@ export default function IssueTable({ issues = [], onSelectIssue }) {
                     <td style={{ textAlign: 'right' }}>
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-secondary inspect-btn"
                         style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
                         onClick={(e) => {
                           e.stopPropagation();

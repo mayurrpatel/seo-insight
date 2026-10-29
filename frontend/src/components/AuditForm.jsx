@@ -7,10 +7,19 @@ import {
   CheckCircle2,
   Lock,
   Layers,
-  FileCheck
+  FileCheck,
+  History,
+  ArrowRight
 } from 'lucide-react';
 
-export default function AuditForm({ onStartAudit, onLoadSample, isLoading }) {
+export default function AuditForm({
+  onStartAudit,
+  onLoadSample,
+  onOpenHistory,
+  history = [],
+  onSelectAudit,
+  isLoading
+}) {
   const [url, setUrl] = useState('');
   const [maxPages, setMaxPages] = useState(12);
   const [showOptions, setShowOptions] = useState(false);
@@ -48,7 +57,7 @@ export default function AuditForm({ onStartAudit, onLoadSample, isLoading }) {
       <div className="landing-hero">
         <div className="hero-pill">
           <FileCheck size={14} />
-          Rule-Based Technical SEO Auditor
+          Rule-Based Technical SEO Auditor &amp; Fix Prioritizer
         </div>
         <h1 className="hero-title">
           Website SEO Audit &amp; Fix Prioritizer
@@ -142,8 +151,8 @@ export default function AuditForm({ onStartAudit, onLoadSample, isLoading }) {
 
         <div className="demo-trigger">
           <div className="demo-info">
-            <h4>Want to inspect an instant audit report?</h4>
-            <p>Explore an illustrative SaaS company audit report with complete findings and evidence.</p>
+            <h4>Explore Sample Enterprise Audit</h4>
+            <p>Inspect an illustrative SaaS company audit report with complete findings and evidence.</p>
           </div>
           <button
             type="button"
@@ -155,6 +164,86 @@ export default function AuditForm({ onStartAudit, onLoadSample, isLoading }) {
           </button>
         </div>
       </div>
+
+      {/* Previously Audited Websites Section */}
+      {history.length > 0 && (
+        <div className="recent-audits-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <History size={18} color="#2563eb" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                Previously Audited Websites ({history.length})
+              </h3>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              onClick={onOpenHistory}
+            >
+              View Full History ({history.length})
+            </button>
+          </div>
+
+          <div className="recent-audits-grid">
+            {history.slice(0, 3).map((item) => {
+              const score = item.health_score ?? 0;
+              let scoreColor = '#16a34a';
+              let scoreBg = '#f0fdf4';
+              if (score < 60) {
+                scoreColor = '#dc2626';
+                scoreBg = '#fef2f2';
+              } else if (score < 80) {
+                scoreColor = '#d97706';
+                scoreBg = '#fffbeb';
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className="recent-audit-card"
+                  onClick={() => onSelectAudit(item.id)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.2rem' }}>
+                        {item.domain}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {item.timestamp?.split(' ')[0]}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: scoreBg,
+                        border: `2px solid ${scoreColor}`,
+                        color: scoreColor,
+                        fontWeight: 800,
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {score}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.6rem' }}>
+                    <span>{item.pages_scanned} pages • {item.total_issues} issues</span>
+                    <span style={{ color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      Open <ArrowRight size={12} />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="features-grid">
         <div className="feature-box">

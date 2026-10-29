@@ -1,7 +1,14 @@
 import React from 'react';
-import { ShieldCheck, PlayCircle, RotateCcw } from 'lucide-react';
+import { ShieldCheck, PlayCircle, RotateCcw, History } from 'lucide-react';
 
-export default function Header({ onReset, onLoadSample, isScanning, hasResults }) {
+export default function Header({
+  onReset,
+  onLoadSample,
+  onOpenHistory,
+  historyCount = 0,
+  isScanning,
+  hasResults
+}) {
   return (
     <header className="app-header">
       <div className="header-container">
@@ -11,11 +18,24 @@ export default function Header({ onReset, onLoadSample, isScanning, hasResults }
           </div>
           <div className="brand-title">
             SEO <span>Insight</span>
-            <span className="brand-tag">Audit & Prioritizer</span>
+            <span className="brand-tag">Audit &amp; Prioritizer</span>
           </div>
         </div>
 
         <div className="header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary history-nav-btn"
+            onClick={onOpenHistory}
+            title="View previously audited websites"
+          >
+            <History size={16} />
+            Saved Reports
+            {historyCount > 0 && (
+              <span className="history-count-badge">{historyCount}</span>
+            )}
+          </button>
+
           {hasResults && (
             <button
               className="btn btn-secondary"

@@ -74,6 +74,7 @@ code, pre {
   position: sticky;
   top: 0;
   z-index: 40;
+  backdrop-filter: blur(8px);
 }
 
 .header-container {
@@ -90,6 +91,11 @@ code, pre {
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.brand-group:hover {
+  opacity: 0.9;
 }
 
 .brand-logo {
@@ -100,6 +106,7 @@ code, pre {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
 }
 
 .brand-title {
@@ -131,6 +138,20 @@ code, pre {
   gap: 0.75rem;
 }
 
+.history-nav-btn {
+  position: relative;
+}
+
+.history-count-badge {
+  font-size: 0.7rem;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  margin-left: 0.2rem;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -154,10 +175,12 @@ code, pre {
 .btn-primary {
   background: var(--accent);
   color: #ffffff;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -259,6 +282,7 @@ code, pre {
   padding: 0.3rem 0.8rem;
   border-radius: 9999px;
   margin-bottom: 1rem;
+  border: 1px solid #bfdbfe;
 }
 
 .hero-title {
@@ -277,12 +301,12 @@ code, pre {
 
 .audit-card {
   max-width: 780px;
-  margin: 0 auto 3rem;
+  margin: 0 auto 2.5rem;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  padding: 2rem;
+  padding: 2.25rem;
 }
 
 .form-group {
@@ -304,12 +328,12 @@ code, pre {
 
 .url-input {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   font-size: 0.95rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color 0.15s ease-in-out;
+  transition: all 0.15s ease-in-out;
 }
 
 .url-input:focus {
@@ -383,12 +407,59 @@ code, pre {
   color: var(--text-muted);
 }
 
+/* Recent Audits Section */
+.recent-audits-section {
+  max-width: 780px;
+  margin: 0 auto 3rem;
+}
+
+.recent-audits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.recent-audit-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.recent-audit-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+
+/* History Modal & List */
+.history-card-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  gap: 1rem;
+}
+
+.history-card-item:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
 /* Feature Highlights Grid */
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.5rem;
-  margin-top: 3.5rem;
+  margin-top: 2rem;
 }
 
 .feature-box {
@@ -542,7 +613,7 @@ code, pre {
   gap: 0.6rem;
 }
 
-/* Health Score Card */
+/* Health Score Card with SVG Radial Gauge */
 .score-overview-grid {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -561,12 +632,18 @@ code, pre {
 
 .radial-score-container {
   position: relative;
-  width: 160px;
-  height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
+}
+
+.score-number-overlay {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .score-number {
@@ -581,7 +658,42 @@ code, pre {
   text-transform: uppercase;
   padding: 0.3rem 0.8rem;
   border-radius: 9999px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.score-pill-excellent {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.score-pill-good {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.score-pill-poor {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.formula-trigger-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.formula-trigger-btn:hover {
+  text-decoration: underline;
 }
 
 .score-explanation {
@@ -589,9 +701,11 @@ code, pre {
   color: var(--text-muted);
   line-height: 1.45;
   background: var(--bg-subtle);
-  padding: 0.6rem 0.8rem;
+  padding: 0.65rem 0.85rem;
   border-radius: var(--radius-sm);
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
+  text-align: left;
+  border: 1px solid var(--border);
 }
 
 .stats-grid {
@@ -668,6 +782,75 @@ code, pre {
   transition: width 0.4s ease;
 }
 
+/* Interactive Severity Tabs in Table */
+.severity-tabs-container {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  overflow-x: auto;
+}
+
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tab-pill:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.tab-pill-count {
+  font-size: 0.72rem;
+  background: var(--bg-subtle);
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.tab-pill-active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.tab-pill-active .tab-pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.tab-pill-critical.tab-pill-active {
+  background: var(--sev-critical);
+  border-color: var(--sev-critical);
+}
+
+.tab-pill-high.tab-pill-active {
+  background: var(--sev-high);
+  border-color: var(--sev-high);
+}
+
+.tab-pill-medium.tab-pill-active {
+  background: var(--sev-medium);
+  border-color: var(--sev-medium);
+}
+
+.tab-pill-low.tab-pill-active {
+  background: var(--sev-low);
+  border-color: var(--sev-low);
+}
+
 /* Issue Table */
 .table-card {
   margin-bottom: 2rem;
@@ -676,7 +859,7 @@ code, pre {
 }
 
 .table-controls {
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   gap: 1rem;
   border-bottom: 1px solid var(--border);
@@ -706,10 +889,12 @@ code, pre {
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   outline: none;
+  transition: all 0.15s ease;
 }
 
 .search-input:focus {
   border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .filters-group {
@@ -759,8 +944,19 @@ code, pre {
   vertical-align: middle;
 }
 
-.issues-table tr:hover td {
-  background: #fbfcfe;
+.table-issue-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.table-issue-row:hover td {
+  background: #f8fafc;
+}
+
+.table-issue-row:hover .inspect-btn {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
 }
 
 .priority-score-pill {
@@ -792,8 +988,8 @@ code, pre {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
   z-index: 50;
   display: flex;
   align-items: center;
@@ -810,6 +1006,18 @@ code, pre {
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
+  animation: modalEnter 0.2s ease-out;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal-header {
@@ -825,8 +1033,9 @@ code, pre {
   border: none;
   cursor: pointer;
   color: var(--text-light);
-  padding: 0.25rem;
-  border-radius: 4px;
+  padding: 0.35rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .modal-close-btn:hover {
@@ -917,11 +1126,10 @@ code, pre {
 .app-footer {
   background: #ffffff;
   border-top: 1px solid var(--border);
-  padding: 1.5rem 0;
+  padding: 1.25rem 0;
   margin-top: auto;
   font-size: 0.85rem;
   color: var(--text-muted);
-  text-align: center;
 }
 
 /* Responsive adjustments */
@@ -932,4 +1140,5 @@ code, pre {
   .input-with-button { flex-direction: column; }
   .header-actions { flex-wrap: wrap; }
   .demo-trigger { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .history-card-item { flex-direction: column; align-items: flex-start; }
 }

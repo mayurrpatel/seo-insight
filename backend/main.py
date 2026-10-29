@@ -1,5 +1,6 @@
 """
 FastAPI Backend Application for SEO Insight — Website SEO Audit & Fix Prioritizer.
+With SQLite database persistence for audit history and reports.
 """
 
 import asyncio
@@ -20,12 +21,16 @@ from analyzer.duplicate_detector import analyze_cross_page_issues
 from analyzer.prioritizer import calculate_health_score, sort_prioritized_issues
 from reports.csv_exporter import generate_csv_report
 from reports.html_exporter import generate_html_report
+from database import init_db, save_audit, get_audit_by_id, get_audit_history, delete_audit_by_id
 
 app = FastAPI(
     title="SEO Insight API",
-    description="Website SEO Audit & Fix Prioritizer API",
-    version="1.0.0"
+    description="Website SEO Audit & Fix Prioritizer API with Database History",
+    version="1.1.0"
 )
+
+# Initialize database schema and seeds on startup
+init_db()
 
 # Enable CORS for frontend Vite dev server and deployment
 app.add_middleware(
@@ -36,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory store for audit sessions
+# In-memory store for active audit sessions
 AUDITS_STORE: dict[str, dict] = {}
 
 SAMPLE_DATA_PATH = Path(__file__).parent / "sample_data" / "sample_audit.json"
@@ -94,13 +99,12 @@ def execute_audit_task(audit_id: str, target_url: str, max_pages: int, allow_tes
         sorted_issues = sort_prioritized_issues(all_issues)
 
         # Build final audit result
-        session["status"] = "completed"
-        session["status_message"] = "Audit completed successfully."
-        session["result"] = {
+        result_data = {
             "audit_id": audit_id,
             "is_sample": False,
             "target_url": target_url,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "pages_scanned": crawler.pages_scanned,
             "pages_discovered": crawler.pages_discovered,
             "pages_failed": crawler.pages_failed,
@@ -120,6 +124,16 @@ def execute_audit_task(audit_id: str, target_url: str, max_pages: int, allow_tes
             ]
         }
 
+        session["status"] = "completed"
+        session["status_message"] = "Audit completed successfully."
+        session["result"] = result_data
+
+        # Persist directly into SQLite database
+        try:
+            save_audit(result_data)
+        except Exception as db_err:
+            print(f"Warning: Failed to save audit to DB: {db_err}")
+
     except Exception as e:
         session["status"] = "failed"
         session["error"] = str(e)
@@ -128,7 +142,14 @@ def execute_audit_task(audit_id: str, target_url: str, max_pages: int, allow_tes
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "app": "SEO Insight API", "version": "1.0.0"}
+    return {"status": "ok", "app": "SEO Insight API", "version": "1.1.0"}
+
+
+@app.get("/api/audits/history")
+def get_audits_history():
+    """Retrieve all previously audited reports from the database."""
+    history = get_audit_history()
+    return {"history": history, "total": len(history)}
 
 
 @app.post("/api/audit")
@@ -173,6 +194,19 @@ def start_audit(req: AuditRequest, background_tasks: BackgroundTasks):
 def get_audit_status(audit_id: str):
     session = AUDITS_STORE.get(audit_id)
     if not session:
+        # Check if already completed and in database
+        saved = get_audit_by_id(audit_id)
+        if saved:
+            return {
+                "audit_id": audit_id,
+                "status": "completed",
+                "status_message": "Audit completed.",
+                "error": None,
+                "pages_discovered": saved.get("pages_discovered", 0),
+                "pages_scanned": saved.get("pages_scanned", 0),
+                "pages_failed": saved.get("pages_failed", 0),
+                "current_url": None,
+            }
         raise HTTPException(status_code=404, detail="Audit session not found.")
 
     crawler = session.get("crawler")
@@ -190,30 +224,44 @@ def get_audit_status(audit_id: str):
 
 @app.get("/api/audit/{audit_id}")
 def get_audit_result(audit_id: str):
-    # Check if sample audit requested
+    # Check if in active memory
+    session = AUDITS_STORE.get(audit_id)
+    if session:
+        if session["status"] == "failed":
+            return {
+                "audit_id": audit_id,
+                "status": "failed",
+                "error": session.get("error"),
+                "status_message": session.get("status_message")
+            }
+        if session["status"] != "completed":
+            return {
+                "audit_id": audit_id,
+                "status": session["status"],
+                "status_message": session.get("status_message")
+            }
+        return session["result"]
+
+    # Check database persistence
+    saved_audit = get_audit_by_id(audit_id)
+    if saved_audit:
+        return saved_audit
+
+    # Check sample audit fallback
     if audit_id == "sample-audit-acme-2025":
         return get_sample_audit()
 
-    session = AUDITS_STORE.get(audit_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Audit session not found.")
+    raise HTTPException(status_code=404, detail="Audit report not found.")
 
-    if session["status"] == "failed":
-        return {
-            "audit_id": audit_id,
-            "status": "failed",
-            "error": session.get("error"),
-            "status_message": session.get("status_message")
-        }
 
-    if session["status"] != "completed":
-        return {
-            "audit_id": audit_id,
-            "status": session["status"],
-            "status_message": session.get("status_message")
-        }
-
-    return session["result"]
+@app.delete("/api/audit/{audit_id}")
+def delete_audit(audit_id: str):
+    """Delete an audit from database and active sessions."""
+    AUDITS_STORE.pop(audit_id, None)
+    deleted = delete_audit_by_id(audit_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Audit not found in database.")
+    return {"status": "ok", "message": f"Audit {audit_id} deleted."}
 
 
 @app.get("/api/sample-audit")
@@ -227,13 +275,18 @@ def get_sample_audit():
 
 @app.get("/api/audit/{audit_id}/csv")
 def export_audit_csv(audit_id: str):
-    if audit_id == "sample-audit-acme-2025":
-        data = get_sample_audit()
-    else:
-        session = AUDITS_STORE.get(audit_id)
-        if not session or not session.get("result"):
-            raise HTTPException(status_code=404, detail="Audit result not ready or not found.")
+    data = None
+    session = AUDITS_STORE.get(audit_id)
+    if session and session.get("result"):
         data = session["result"]
+    else:
+        data = get_audit_by_id(audit_id)
+
+    if not data and audit_id == "sample-audit-acme-2025":
+        data = get_sample_audit()
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Audit result not ready or not found.")
 
     csv_content = generate_csv_report(data)
     filename = f"seo-audit-{audit_id[:8]}.csv"
@@ -246,13 +299,18 @@ def export_audit_csv(audit_id: str):
 
 @app.get("/api/audit/{audit_id}/report")
 def export_audit_html(audit_id: str):
-    if audit_id == "sample-audit-acme-2025":
-        data = get_sample_audit()
-    else:
-        session = AUDITS_STORE.get(audit_id)
-        if not session or not session.get("result"):
-            raise HTTPException(status_code=404, detail="Audit result not ready or not found.")
+    data = None
+    session = AUDITS_STORE.get(audit_id)
+    if session and session.get("result"):
         data = session["result"]
+    else:
+        data = get_audit_by_id(audit_id)
+
+    if not data and audit_id == "sample-audit-acme-2025":
+        data = get_sample_audit()
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Audit result not ready or not found.")
 
     html_content = generate_html_report(data)
     filename = f"seo-audit-{audit_id[:8]}.html"

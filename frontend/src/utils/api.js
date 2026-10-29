@@ -10,6 +10,15 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function fetchAuditHistory() {
+  const res = await fetch(`${API_BASE}/api/audits/history`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to fetch audit history');
+  }
+  return res.json();
+}
+
 export async function startAudit(url, maxPages = 12) {
   const res = await fetch(`${API_BASE}/api/audit`, {
     method: 'POST',
@@ -39,6 +48,17 @@ export async function fetchAuditResult(auditId) {
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.detail || 'Failed to fetch audit result');
+  }
+  return res.json();
+}
+
+export async function deleteAudit(auditId) {
+  const res = await fetch(`${API_BASE}/api/audit/${auditId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to delete audit');
   }
   return res.json();
 }

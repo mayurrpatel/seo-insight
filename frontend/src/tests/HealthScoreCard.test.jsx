@@ -1,10 +1,10 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import HealthScoreCard from '../components/HealthScoreCard';
 
 describe('HealthScoreCard component', () => {
-  it('renders health score number and rating accurately', () => {
+  it('renders health score number, rating, and toggleable formula', () => {
     const mockHealth = {
       score: 85,
       rating: 'Good',
@@ -15,7 +15,12 @@ describe('HealthScoreCard component', () => {
 
     expect(screen.getByText('85')).toBeDefined();
     expect(screen.getByText('Good')).toBeDefined();
-    expect(screen.getByText(/Calculation:/)).toBeDefined();
+
+    // Click formula trigger button
+    const formulaBtn = screen.getByRole('button', { name: /How is this calculated/i });
+    expect(formulaBtn).toBeDefined();
+    fireEvent.click(formulaBtn);
+
     expect(screen.getByText(/Normalized Penalty/)).toBeDefined();
   });
 

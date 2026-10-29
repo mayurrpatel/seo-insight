@@ -88,7 +88,9 @@ Evaluates confirmed findings across 5 primary SEO categories:
 - **Priority Scores (1–100):** Every individual finding has a calculated priority score allowing instant sorting.
 - **Important Disclaimer:** All findings reflect technical crawl hygiene and webmaster standards, not guaranteed Google ranking improvements.
 
-### D. Exportable Audit Reports
+### D. Exportable Audit Reports & Database History
+- **SQLite Database Persistence:** Every completed audit is automatically saved into a local SQLite database (`backend/seo_insight.db`). Past audit reports persist across server restarts, and can be viewed, searched, exported, or deleted at any time.
+- **Interactive Saved Reports Drawer:** Access all previously audited websites with their domain, score badge, date, issue breakdown, and 1-click report loader.
 - **RFC 4180 CSV Export:** Direct spreadsheet download with issue ID, category, severity, priority score, affected URL, occurrences, evidence, and suggested fix.
 - **Standalone HTML Report:** Self-contained, printable executive report complete with health score dials, executive metrics, issue cards, and responsive print-to-PDF styles (`@media print`).
 - **One-Click Sample Report:** Pre-packaged illustrative audit data (`https://acme-analytics-demo.io`) to test the application immediately without live network dependency.
@@ -159,20 +161,20 @@ Evaluates confirmed findings across 5 primary SEO categories:
 ## 5. Running Automated Tests
 
 ### Backend Tests (Pytest)
-Run the 26 backend unit and integration tests:
+Run the 29 backend unit and integration tests:
 ```bash
 cd backend
 python -m pytest
 ```
-*Tests cover SSRF protection, URL validation, all SEO rules (titles, meta, headings, canonicals, alts, mixed content), scoring calculation, crawler filtering, and API endpoints.*
+*Tests cover SSRF protection, URL validation, all SEO rules (titles, meta, headings, canonicals, alts, mixed content), scoring calculation, SQLite database persistence, crawler filtering, and API endpoints.*
 
 ### Frontend Tests (Vitest)
-Run the React unit and component tests:
+Run the 9 React unit and component tests:
 ```bash
 cd frontend
 npm test
 ```
-*Tests cover health score card rendering, issue table searching and filtering, and modal drawer interactions.*
+*Tests cover health score card rendering, issue table searching and filtering, audit history modal, and inspection modal drawer interactions.*
 
 ### Frontend Production Build
 Verify the production build assets:
@@ -188,9 +190,11 @@ npm run build
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/health` | Health check and server status. |
+| `GET` | `/api/audits/history` | Retrieves all previously audited reports from SQLite database. |
 | `POST` | `/api/audit` | Starts a new asynchronous website audit session. |
 | `GET` | `/api/audit/status/{id}` | Polls crawl progress, pages scanned, and failures. |
-| `GET` | `/api/audit/{id}` | Retrieves completed audit results with findings & scores. |
+| `GET` | `/api/audit/{id}` | Retrieves completed audit results with findings & scores (from memory or SQLite). |
+| `DELETE` | `/api/audit/{id}` | Deletes an audit from the SQLite database. |
 | `GET` | `/api/sample-audit` | Returns instant illustrative sample audit data. |
 | `GET` | `/api/audit/{id}/csv` | Downloads findings as an RFC 4180 CSV file. |
 | `GET` | `/api/audit/{id}/report`| Downloads a self-contained, printable HTML report. |

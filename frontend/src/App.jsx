@@ -9,14 +9,17 @@ import IssueTable from './components/IssueTable';
 import IssueDetailModal from './components/IssueDetailModal';
 import CrawlSummary from './components/CrawlSummary';
 import ExportActions from './components/ExportActions';
+import AuditHistoryModal from './components/AuditHistoryModal';
 
 import {
   startAudit,
   fetchAuditStatus,
   fetchAuditResult,
-  fetchSampleAudit
+  fetchSampleAudit,
+  fetchAuditHistory,
+  deleteAudit
 } from './utils/api';
-import { ExternalLink, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ExternalLink, AlertTriangle, ShieldCheck, History } from 'lucide-react';
 
 export default function App() {
   const [viewState, setViewState] = useState('IDLE'); // IDLE, SCANNING, RESULTS, ERROR
@@ -26,19 +29,34 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedIssue, setSelectedIssue] = useState(null);
 
+  // History state
+  const [history, setHistory] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
   const pollIntervalRef = useRef(null);
 
-  // Clean up polling timer
+  const loadHistory = async () => {
+    try {
+      const resp = await fetchAuditHistory();
+      if (resp && resp.history) {
+        setHistory(resp.history);
+      }
+    } catch {
+      // Non-fatal if backend is warming up
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+    return () => stopPolling();
+  }, []);
+
   const stopPolling = () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
   };
-
-  useEffect(() => {
-    return () => stopPolling();
-  }, []);
 
   const handleStartAudit = async (targetUrl, maxPages) => {
     setErrorMessage('');
@@ -61,6 +79,8 @@ export default function App() {
             const resultResp = await fetchAuditResult(newAuditId);
             setAuditResult(resultResp);
             setViewState('RESULTS');
+            // Refresh saved database history
+            loadHistory();
           } else if (statusResp.status === 'failed') {
             stopPolling();
             setErrorMessage(statusResp.error || statusResp.status_message || 'Audit crawl encountered a fatal error.');
@@ -86,9 +106,32 @@ export default function App() {
       setAuditId(sampleData.audit_id);
       setAuditResult(sampleData);
       setViewState('RESULTS');
-    } catch (err) {
+      loadHistory();
+    } catch {
       setErrorMessage('Failed to load sample audit report.');
       setViewState('ERROR');
+    }
+  };
+
+  const handleSelectAudit = async (id) => {
+    stopPolling();
+    setErrorMessage('');
+    try {
+      const data = await fetchAuditResult(id);
+      setAuditId(id);
+      setAuditResult(data);
+      setViewState('RESULTS');
+    } catch (err) {
+      setErrorMessage(`Failed to load audit report ${id}: ${err.message}`);
+      setViewState('ERROR');
+    }
+  };
+
+  const handleDeleteAudit = async (id) => {
+    await deleteAudit(id);
+    await loadHistory();
+    if (auditId === id) {
+      handleReset();
     }
   };
 
@@ -100,6 +143,7 @@ export default function App() {
     setErrorMessage('');
     setSelectedIssue(null);
     setViewState('IDLE');
+    loadHistory();
   };
 
   return (
@@ -107,6 +151,8 @@ export default function App() {
       <Header
         onReset={handleReset}
         onLoadSample={handleLoadSample}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        historyCount={history.length}
         isScanning={viewState === 'SCANNING'}
         hasResults={viewState === 'RESULTS'}
       />
@@ -116,6 +162,9 @@ export default function App() {
           <AuditForm
             onStartAudit={handleStartAudit}
             onLoadSample={handleLoadSample}
+            onOpenHistory={() => setIsHistoryOpen(true)}
+            history={history}
+            onSelectAudit={handleSelectAudit}
             isLoading={false}
           />
         )}
@@ -148,13 +197,19 @@ export default function App() {
             <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
               {errorMessage}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={handleReset}>
                 Try Another URL
               </button>
               <button className="btn btn-secondary" onClick={handleLoadSample}>
-                View Sample Report Instead
+                View Sample Report
               </button>
+              {history.length > 0 && (
+                <button className="btn btn-secondary" onClick={() => setIsHistoryOpen(true)}>
+                  <History size={15} />
+                  Open Saved Reports ({history.length})
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -188,7 +243,18 @@ export default function App() {
                 </div>
               </div>
 
-              <ExportActions auditId={auditResult.audit_id} />
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsHistoryOpen(true)}
+                  title="View saved audits database"
+                >
+                  <History size={16} />
+                  History ({history.length})
+                </button>
+                <ExportActions auditId={auditResult.audit_id} />
+              </div>
             </div>
 
             <div className="score-overview-grid">
@@ -216,9 +282,18 @@ export default function App() {
         onClose={() => setSelectedIssue(null)}
       />
 
+      <AuditHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        onSelectAudit={handleSelectAudit}
+        onDeleteAudit={handleDeleteAudit}
+      />
+
       <footer className="app-footer">
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
-          SEO Insight — Website SEO Audit &amp; Fix Prioritizer • Internship Assessment
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span>SEO Insight — Website SEO Audit &amp; Fix Prioritizer • Internship Assessment</span>
+          <span>SQLite Database Persistence Active</span>
         </div>
       </footer>
     </div>

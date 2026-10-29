@@ -7,10 +7,12 @@ from fastapi import HTTPException, BackgroundTasks
 from main import (
     health_check,
     get_sample_audit,
+    get_audits_history,
     export_audit_csv,
     export_audit_html,
     start_audit,
     get_audit_result,
+    delete_audit,
     AuditRequest,
 )
 
@@ -27,6 +29,15 @@ def test_sample_audit_handler():
     assert "health_score" in data
     assert len(data["issues"]) > 0
     assert data["target_url"] == "https://acme-analytics-demo.io"
+
+
+def test_audits_history_endpoint():
+    res = get_audits_history()
+    assert "history" in res
+    assert res["total"] >= 1
+    sample = res["history"][0]
+    assert "domain" in sample
+    assert "health_score" in sample
 
 
 def test_ssrf_validation_on_audit_start():
